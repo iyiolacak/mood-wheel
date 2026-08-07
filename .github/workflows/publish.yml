@@ -3,6 +3,7 @@ name: Publish
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,6 +19,8 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
+      # npm trusted publishing requires npm 11.5.1 or newer for OIDC exchange.
+      - run: npm install --global npm@11
       - run: npm ci
       - run: npm run check
       - run: npm publish --workspace @muzluk/mood-wheel --access public --provenance
