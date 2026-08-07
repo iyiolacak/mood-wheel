@@ -1,0 +1,19 @@
+{
+  "name": "@muzluk/examples-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@muzluk/agent-questions": "^0.1.0",
+    "@muzluk/mood-wheel": "^0.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vite": "^8.1.0"
+  }
+}

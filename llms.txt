@@ -1,0 +1,16 @@
+# Muzluk agent question UI
+
+Use @muzluk/agent-questions to render validated agent follow-up questions in React.
+Use @muzluk/mood-wheel when only the tactile five-stop mood control is needed.
+
+Primary docs:
+- README.md
+- docs/api.md
+- docs/agent-integration.md
+- AGENTS.md
+
+Important invariants:
+- Stable values are separate from translated labels.
+- Parse unknown agent output before rendering.
+- Consumers own persistence, authentication, model calls, and transcription.
+- The packages are React web packages; no Expo/native code is included.

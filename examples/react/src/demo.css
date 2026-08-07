@@ -1,0 +1,10 @@
+:root { color-scheme: light; font-family: ui-sans-serif, system-ui, sans-serif; background: #fff; color: #111; }
+body { margin: 0; }
+main { width: min(100% - 1.1rem, 42rem); margin: 0 auto; padding: 1.25rem 0 2rem; }
+header p { margin: 0; color: #7c7c7c; font-size: .75rem; }
+h1 { max-width: 24ch; margin: .35rem 0 1rem; font-size: clamp(1.45rem, 6vw, 2rem); font-weight: 400; line-height: 1.1; letter-spacing: -.02em; }
+nav { display: flex; gap: .25rem; margin-bottom: .55rem; }
+nav button { border: 0; border-radius: .55rem; padding: .45rem .65rem; background: #e7e7e7; color: #111; font: inherit; font-size: .8rem; cursor: pointer; }
+nav button[data-active] { background: #1cb0f6; color: #071a26; }
+.demo-card { overflow: hidden; border-radius: 1rem; background: #fff; }
+.demo-card > .muzluk-mood-wheel { --mw-controls-text: #111; --mw-controls-muted: #777; padding: .65rem; }

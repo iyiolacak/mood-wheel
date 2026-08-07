@@ -1,0 +1,134 @@
+.muzluk-mood-wheel {
+  --mw-surface: #000;
+  --mw-text: #fff8ee;
+  --mw-muted: #c8bdaf;
+  --mw-focus: #ff9f43;
+  --mw-controls-text: var(--mw-text);
+  --mw-controls-muted: var(--mw-muted);
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.625rem;
+  color: var(--mw-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.muzluk-mood-wheel *,
+.muzluk-mood-wheel *::before,
+.muzluk-mood-wheel *::after { box-sizing: border-box; }
+
+.muzluk-mood-wheel__viewport {
+  position: relative;
+  height: 7rem;
+  width: 100%;
+  touch-action: none;
+  cursor: grab;
+  overflow: hidden;
+  border-radius: 1.125rem;
+  background: var(--mw-surface);
+  outline: none;
+  user-select: none;
+}
+
+.muzluk-mood-wheel__viewport:active { cursor: grabbing; }
+.muzluk-mood-wheel__viewport:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.muzluk-mood-wheel__canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+
+.muzluk-mood-wheel__fallback-wheel {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(146%, 32.5rem);
+  height: auto;
+  transform-origin: 50% 98%;
+  transition: transform 360ms cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.muzluk-mood-wheel__fallback-pointer {
+  position: absolute;
+  z-index: 1;
+  bottom: -0.15rem;
+  left: 50%;
+  width: auto;
+  height: clamp(2.5rem, 9vw, 3.625rem);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.muzluk-mood-wheel__viewport[data-pixi-ready] .muzluk-mood-wheel__fallback-wheel,
+.muzluk-mood-wheel__viewport[data-pixi-ready] .muzluk-mood-wheel__fallback-pointer { visibility: hidden; }
+
+.muzluk-mood-wheel__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem minmax(4rem, 1fr) 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--mw-controls-text);
+}
+
+.muzluk-mood-wheel button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.muzluk-mood-wheel button:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.muzluk-mood-wheel button:disabled { cursor: default; opacity: 0.34; }
+
+.muzluk-mood-wheel__edge {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.5rem 0.25rem;
+  color: var(--mw-controls-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1), color 160ms ease;
+}
+
+.muzluk-mood-wheel__edge--last { text-align: right; }
+.muzluk-mood-wheel__icon-button { display: grid; width: 2rem; height: 2rem; place-items: center; cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), color 160ms ease; }
+.muzluk-mood-wheel__edge:active,
+.muzluk-mood-wheel__icon-button:active { transform: scale(.97); }
+.muzluk-mood-wheel__chevron { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.6; }
+.muzluk-mood-wheel__current { min-width: 0; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+.muzluk-mood-wheel__hint { display: flex; align-items: center; justify-content: center; gap: .375rem; margin: 0; padding-inline: .25rem; color: var(--mw-controls-muted); text-align: center; font-size: 0.8125rem; line-height: 1.2; }
+.muzluk-mood-wheel__swipe-icon { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.muzluk-mood-wheel__swipe-icon--spin { animation: muzluk-mood-wheel-hint-spin 650ms linear 1; }
+.muzluk-mood-wheel[data-disabled] { opacity: 0.62; }
+.muzluk-mood-wheel--invalid { padding: 0.75rem; color: #8f1d31; background: #fff2e8; }
+
+@media (max-width: 420px) {
+  .muzluk-mood-wheel { gap: 0.5rem; }
+  .muzluk-mood-wheel__controls { grid-template-columns: minmax(0, 1fr) 1.75rem minmax(3.5rem, 1fr) 1.75rem minmax(0, 1fr); gap: 0.2rem; font-size: 0.8125rem; }
+  .muzluk-mood-wheel__icon-button { width: 1.75rem; height: 1.75rem; }
+  .muzluk-mood-wheel__current { font-size: 0.875rem; }
+}
+
+@media (min-width: 640px) {
+  .muzluk-mood-wheel__viewport { height: 10rem; }
+}
+
+.muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8rem; }
+.muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(146%, 32.5rem); }
+.muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: max(122%, 18.25rem); }
+.muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.25rem, 8vw, 3.25rem); }
+@media (min-width: 640px) {
+  .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 11rem; }
+  .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(106%, 41.25rem); }
+  .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: min(92%, 32.5rem); }
+  .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.75rem, 7vw, 3.875rem); }
+}
+
+@keyframes muzluk-mood-wheel-hint-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .muzluk-mood-wheel *, .muzluk-mood-wheel *::before, .muzluk-mood-wheel *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

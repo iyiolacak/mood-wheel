@@ -1,0 +1,53 @@
+{
+  "name": "@muzluk/mood-wheel",
+  "version": "0.1.0",
+  "description": "A tactile, accessible React mood wheel with drag, detents, sound, and owned hand-drawn assets.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist", "README.md"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/mood-wheel.css"
+  },
+  "scripts": {
+    "build": "tsc --emitDeclarationOnly --outDir dist && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run ../../packages/mood-wheel/test"
+  },
+  "dependencies": {
+    "pixi.js": "^8.19.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^8.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyiolacak/mood-wheel.git",
+    "directory": "packages/mood-wheel"
+  },
+  "keywords": [
+    "mood-wheel",
+    "emotion-wheel",
+    "feeling-picker",
+    "react",
+    "accessible",
+    "agent-question-ui"
+  ]
+}
