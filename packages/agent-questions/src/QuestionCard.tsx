@@ -59,6 +59,14 @@ function normalizeRangeValue(value: number, min: number, max: number, step: numb
   return Math.max(min, Math.min(max, snapped));
 }
 
+/** Matches the native shelf's compact two-column rule for short answer sets. */
+function hasCompactChoices(question: Extract<AgentQuestion, { kind: "choice" }>) {
+  return question.options.length <= 4 && question.options.every((option) => {
+    const words = option.label.trim().split(" ").filter(Boolean);
+    return words.length <= 2 && option.label.length <= 18;
+  });
+}
+
 /** Keeps manually constructed questions from bypassing the wheel's five-stop contract. */
 function hasAuthoredMoodStops(question: AgentQuestion) {
   if (question.kind !== "mood-wheel") return true;
@@ -189,7 +197,7 @@ export function QuestionCard({
       {locked ? (
         <div className="muzluk-agent-questions__locked"><CheckIcon /><span>{String(lockedAnswer)}</span></div>
       ) : question.kind === "choice" ? (
-        <div className="muzluk-agent-questions__choice-list">
+        <div className="muzluk-agent-questions__choice-list" data-compact={hasCompactChoices(question)}>
           {question.options.map((option, index) => (
             <button
               type="button"

@@ -31,3 +31,5 @@ The component owns drafts, paging, animation, and retry presentation. Your app
 owns model calls, authorization, persistence, and what happens after completion.
 Set `sound={false}` for a silent host, or pass `assets={{ reveal: ... }}`. The
 exact bundled reveal cue is also available as `AGENT_QUESTIONS_ASSETS.reveal`.
+Its default theme reproduces Muzluk's compact dark composer shelf; every semantic
+color remains overridable through the documented `--aq-*` custom properties.

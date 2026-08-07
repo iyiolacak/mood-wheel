@@ -1,8 +1,8 @@
 .muzluk-mood-wheel {
-  --mw-surface: #000;
-  --mw-text: #fff8ee;
-  --mw-muted: #c8bdaf;
-  --mw-focus: #ff9f43;
+  --mw-surface: #1c1c1e;
+  --mw-text: #f2f2f7;
+  --mw-muted: #a1a1a6;
+  --mw-focus: #0a84ff;
   --mw-controls-text: var(--mw-text);
   --mw-controls-muted: var(--mw-muted);
   box-sizing: border-box;
@@ -21,12 +21,12 @@
 
 .muzluk-mood-wheel__viewport {
   position: relative;
-  height: 7rem;
+  height: 8.25rem;
   width: 100%;
   touch-action: none;
   cursor: grab;
   overflow: hidden;
-  border-radius: 1.125rem;
+  border-radius: 0;
   background: var(--mw-surface);
   outline: none;
   user-select: none;
@@ -98,7 +98,7 @@
 .muzluk-mood-wheel__edge:active,
 .muzluk-mood-wheel__icon-button:active { transform: scale(.97); }
 .muzluk-mood-wheel__chevron { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.6; }
-.muzluk-mood-wheel__current { min-width: 0; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+.muzluk-mood-wheel__current { min-width: 0; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; font-weight: 600; }
 .muzluk-mood-wheel__hint { display: flex; align-items: center; justify-content: center; gap: .375rem; margin: 0; padding-inline: .25rem; color: var(--mw-controls-muted); text-align: center; font-size: 0.8125rem; line-height: 1.2; }
 .muzluk-mood-wheel__swipe-icon { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
 .muzluk-mood-wheel__swipe-icon--spin { animation: muzluk-mood-wheel-hint-spin 650ms linear 1; }
@@ -112,16 +112,12 @@
   .muzluk-mood-wheel__current { font-size: 0.875rem; }
 }
 
-@media (min-width: 640px) {
-  .muzluk-mood-wheel__viewport { height: 10rem; }
-}
-
-.muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8rem; }
+.muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8.25rem; }
 .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(146%, 32.5rem); }
 .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: max(122%, 18.25rem); }
 .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.25rem, 8vw, 3.25rem); }
 @media (min-width: 640px) {
-  .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 11rem; }
+  .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8.25rem; }
   .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(106%, 41.25rem); }
   .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: min(92%, 32.5rem); }
   .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.75rem, 7vw, 3.875rem); }
