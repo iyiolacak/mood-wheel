@@ -97,6 +97,13 @@ function RangeAnswer({
     setMaximum(question.max);
   }, [question.id, question.max]);
 
+  const milestoneValues = question.kind === "time"
+    ? [30, 60].filter((item) => item >= question.min && item <= maximum)
+    : [question.min + Math.floor((maximum - question.min) / (question.step * 2)) * question.step];
+  const hugeMilestoneValues = question.kind === "time"
+    ? [90].filter((item) => item >= question.min && item <= maximum)
+    : [maximum];
+
   return (
     <div className="muzluk-agent-questions__range" data-kind={question.kind}>
       <AdvancedSlider
@@ -112,6 +119,8 @@ function RangeAnswer({
         sound={sound}
         formatValue={(nextValue) => formatter.format(nextValue)}
         unit={unit}
+        milestoneValues={milestoneValues}
+        hugeMilestoneValues={hugeMilestoneValues}
         onValueChange={onValue}
       />
       <div className="muzluk-agent-questions__range-labels">

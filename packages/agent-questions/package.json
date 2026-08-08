@@ -1,6 +1,6 @@
 {
   "name": "@muzluk/agent-questions",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "A swipeable React question reel for agent follow-ups, with choices, text, scales, time, and a tactile mood wheel.",
   "license": "MIT",
   "type": "module",
