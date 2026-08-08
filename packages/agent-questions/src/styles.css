@@ -141,7 +141,7 @@
 .muzluk-advanced-slider__tick { position: relative; height: 100%; flex: none; text-align: center; }
 .muzluk-advanced-slider__tick::before { position: absolute; top: 1.25rem; bottom: 0.5rem; left: 0; display: none; width: 2px; border-radius: 999px; background: var(--aq-danger, #ff453a); content: ""; }
 .muzluk-advanced-slider__tick[data-zone="true"]::before { display: block; }
-.muzluk-advanced-slider__tick-label { position: absolute; top: 0; left: 50%; color: var(--aq-muted, #a1a1a6); font-size: 0.75rem; line-height: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; transform: translateX(-50%); }
+.muzluk-advanced-slider__tick-label { position: absolute; top: 0; left: 50%; color: var(--aq-muted, #a1a1a6); font-size: 0.75rem; line-height: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; transform: translateX(-50%); }
 .muzluk-advanced-slider__tick[data-past="true"] .muzluk-advanced-slider__tick-label,
 .muzluk-advanced-slider__tick[data-selected="true"] .muzluk-advanced-slider__tick-label { color: var(--aq-card-text, #f2f2f7); }
 .muzluk-advanced-slider__tick > i { position: absolute; top: 1.75rem; left: 50%; width: var(--as-tick-width); height: var(--as-tick-height); border-radius: 999px; background: var(--as-rest-color); transform: translateX(-50%); transition: height 210ms cubic-bezier(.22, .72, .18, 1), background-color 120ms ease-out; }
