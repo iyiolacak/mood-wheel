@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import revealSoundUrl from "./assets/question-reveal.wav";
+import answeredSoundUrl from "./assets/question-answered.wav";
 import { resolveMessages } from "./messages";
 import { AnswerCue, type AnswerCueValue } from "./AnswerCue";
 import { QuestionCard } from "./QuestionCard";
@@ -17,7 +18,7 @@ import type {
 import { useReducedMotion } from "./useReducedMotion";
 import "./styles.css";
 
-const ANSWER_LOCK_MS = 150;
+const ANSWER_LOCK_MS = 72;
 const FALLBACK_HEIGHT = 220;
 const CARD_GAP = 12;
 const SWIPE_DISTANCE = 52;
@@ -118,11 +119,13 @@ export type AgentQuestionsProps = Readonly<{
 }>;
 
 export type AgentQuestionAssets = Readonly<{
+  /** The physical impact played only after an answer commits successfully. */
+  answered: string;
   /** The short reveal cue played when a new card settles in. */
   reveal: string;
 }>;
 
-const DEFAULT_ASSETS: AgentQuestionAssets = { reveal: revealSoundUrl };
+const DEFAULT_ASSETS: AgentQuestionAssets = { answered: answeredSoundUrl, reveal: revealSoundUrl };
 /** Public URL for the exact shipped question reveal cue. */
 export const AGENT_QUESTIONS_ASSETS: AgentQuestionAssets = DEFAULT_ASSETS;
 
@@ -226,7 +229,7 @@ export function AgentQuestions({
   const [retryCompletion, setRetryCompletion] = React.useState(false);
   const [completed, setCompleted] = React.useState(false);
   const [confirmSkipId, setConfirmSkipId] = React.useState<string | null>(null);
-  const [height, setHeight] = React.useState(FALLBACK_HEIGHT);
+  const [measuredHeights, setMeasuredHeights] = React.useState<Record<string, number>>({});
   const [dragY, setDragY] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const [pageTransition, setPageTransition] = React.useState<PageTransition | null>(null);
@@ -241,6 +244,7 @@ export function AgentQuestions({
   const previousActiveRef = React.useRef<number | null>(null);
   const latestCompletionRef = React.useRef<AgentQuestionResult | null>(null);
   const revealAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const answeredAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const lastRevealAtRef = React.useRef(0);
 
   const playReveal = React.useCallback(() => {
@@ -260,6 +264,19 @@ export function AgentQuestions({
     }
   }, [assets.reveal, reducedMotion, sound]);
 
+  const playAnswered = React.useCallback(() => {
+    if (!sound) return;
+    try {
+      const audio = answeredAudioRef.current ?? new Audio(assets.answered);
+      answeredAudioRef.current = audio;
+      audio.volume = 0.58;
+      audio.currentTime = 0;
+      void audio.play().catch(() => undefined);
+    } catch {
+      // A committed answer must never depend on audio playback succeeding.
+    }
+  }, [assets.answered, sound]);
+
   React.useEffect(() => {
     setAnswers(answerMap(initialAnswers));
     setSkipped(new Set());
@@ -268,6 +285,7 @@ export function AgentQuestions({
     setNumberDrafts({});
     setActiveIndex(Math.max(0, Math.min(initialStep, questions.length - 1)));
     setPendingId(null);
+    setMeasuredHeights({});
     setError(null);
     setRetryCompletion(false);
     setCompleted(false);
@@ -304,7 +322,10 @@ export function AgentQuestions({
   const next = questions[activeIndex + 1];
   const paging = pageTransition !== null;
   const busy = pendingId !== null || paging;
-  const animatedHeight = useSpringNumber(height, reducedMotion, { stiffness: 420, damping: 44, mass: 0.7 });
+  const height = active ? (measuredHeights[active.id] ?? FALLBACK_HEIGHT) : FALLBACK_HEIGHT;
+  const transitionHeight = pageTransition
+    ? (measuredHeights[questions[pageTransition.index]?.id ?? ""] ?? height)
+    : height;
   const animatedDragY = useSpringNumber(dragY, dragging || reducedMotion, { stiffness: 470, damping: 42, mass: 0.72 });
 
   /** Moves the measured reel a full card before atomically adopting its neighbor. */
@@ -318,15 +339,17 @@ export function AgentQuestions({
       return;
     }
     const direction = target > activeIndex ? 1 : -1;
-    const offset = direction > 0 ? -(height + CARD_GAP) : height + CARD_GAP;
-    const durationMs = Math.round(Math.max(260, Math.min(430, 430 - Math.abs(releaseVelocityY) * 0.08)));
+    const targetQuestion = questions[target];
+    const targetHeight = targetQuestion ? (measuredHeights[targetQuestion.id] ?? height) : height;
+    const offset = direction > 0 ? -(height + CARD_GAP) : targetHeight + CARD_GAP;
+    const durationMs = Math.round(Math.max(340, Math.min(480, 480 - Math.abs(releaseVelocityY) * 0.075)));
     setReelVelocityY(offset / Math.max(durationMs / 1_000, 0.001));
     setPageTransition({
       durationMs,
       index: target,
       offset,
     });
-  }, [activeIndex, height, pageTransition, questions.length, reducedMotion]);
+  }, [activeIndex, height, measuredHeights, pageTransition, questions, reducedMotion]);
 
   /** Transition events can be suppressed by a host tab switch, so paging also has a deterministic settle fallback. */
   const completePageTransition = React.useCallback(() => {
@@ -340,7 +363,7 @@ export function AgentQuestions({
 
   React.useEffect(() => {
     if (!pageTransition) return;
-    const timer = window.setTimeout(completePageTransition, 520);
+    const timer = window.setTimeout(completePageTransition, pageTransition.durationMs + 80);
     return () => window.clearTimeout(timer);
   }, [completePageTransition, pageTransition]);
 
@@ -370,6 +393,7 @@ export function AgentQuestions({
     setAnswerCue({ key: `${question.id}:${Date.now()}:${String(value)}`, step: activeIndex });
     try {
       await onAnswer?.(answer);
+      playAnswered();
       const nextAnswers = { ...answers, [question.id]: answer };
       const nextSkipped = new Set(skipped);
       nextSkipped.delete(question.id);
@@ -388,7 +412,7 @@ export function AgentQuestions({
     } finally {
       setPendingId(null);
     }
-  }, [activeIndex, answers, busy, completed, finish, messages.error, onAnswer, questions, reducedMotion, requestNavigation, skipped]);
+  }, [activeIndex, answers, busy, completed, finish, messages.error, onAnswer, playAnswered, questions, reducedMotion, requestNavigation, skipped]);
 
   const skipQuestion = React.useCallback(async (question: AgentQuestion, confirmLast = false) => {
     if (busy || completed || question.required) return;
@@ -508,9 +532,11 @@ export function AgentQuestions({
       onWheelDraft={(value) => setWheelDrafts((current) => ({ ...current, [question.id]: value }))}
       onNumberDraft={(value) => setNumberDrafts((current) => ({ ...current, [question.id]: value }))}
       onSubmit={(value, label) => void submit(question, value, label)}
-      onHeight={(nextHeight) => setHeight((current) => {
+      onHeight={(nextHeight) => setMeasuredHeights((current) => {
         const safeHeight = nextHeight > 1 ? nextHeight : FALLBACK_HEIGHT;
-        return Math.abs(current - safeHeight) < 1 ? current : safeHeight;
+        return Math.abs((current[question.id] ?? 0) - safeHeight) < 1
+          ? current
+          : { ...current, [question.id]: safeHeight };
       })}
       answerPulse={answerPulse}
       revealPulse={revealPulse}
@@ -548,7 +574,10 @@ export function AgentQuestions({
 
       <div
         className="muzluk-agent-questions__window"
-        style={{ height: animatedHeight }}
+        style={{
+          height: transitionHeight,
+          "--aq-page-duration": `${pageTransition?.durationMs ?? 480}ms`,
+        } as React.CSSProperties}
         data-active-index={activeIndex}
         data-dragging={dragging || undefined}
         data-paging={paging || undefined}
@@ -645,9 +674,9 @@ export function AgentQuestions({
             if (["ArrowUp", "PageUp"].includes(event.key)) { event.preventDefault(); goBackward(); }
           }}
         >
-          {previous ? <div className="muzluk-agent-questions__neighbor" style={{ top: -(height + CARD_GAP), transform: `scale(${dragDirection < 0 ? 0.96 + commitProgress * 0.04 : 0.96})`, opacity: dragDirection < 0 ? 0.9 + commitProgress * 0.1 : 0.9 }}>{card(previous, true)}</div> : null}
+          {previous ? <div className="muzluk-agent-questions__neighbor" style={{ top: -((measuredHeights[previous.id] ?? height) + CARD_GAP), transform: `scale(${dragDirection < 0 ? 0.97 + commitProgress * 0.03 : 0.97})`, opacity: dragDirection < 0 ? 0.92 + commitProgress * 0.08 : 0.92 }}>{card(previous, true)}</div> : null}
           <div className="muzluk-agent-questions__current-card" style={{ transform: `scale(${1 - commitProgress * 0.015})` }}>{card(active, false)}</div>
-          {next ? <div className="muzluk-agent-questions__neighbor" style={{ top: height + CARD_GAP, transform: `scale(${dragDirection > 0 ? 0.96 + commitProgress * 0.04 : 0.96})`, opacity: dragDirection > 0 ? 0.9 + commitProgress * 0.1 : 0.9 }}>{card(next, true)}</div> : null}
+          {next ? <div className="muzluk-agent-questions__neighbor" style={{ top: height + CARD_GAP, transform: `scale(${dragDirection > 0 ? 0.97 + commitProgress * 0.03 : 0.97})`, opacity: dragDirection > 0 ? 0.92 + commitProgress * 0.08 : 0.92 }}>{card(next, true)}</div> : null}
         </div>
       </div>
 

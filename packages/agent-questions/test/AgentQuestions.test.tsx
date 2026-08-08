@@ -41,6 +41,8 @@ describe("AgentQuestions", () => {
     const stage = container.querySelector<HTMLElement>(".muzluk-agent-questions__stage");
     expect(stage?.style.transform).toBe("translate3d(0, -232px, 0)");
     expect(screen.getByText("What moved?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Deep work/i })).toHaveAttribute("data-selected", "true");
+    expect(container.querySelector(".muzluk-agent-questions__locked")).not.toBeInTheDocument();
 
     fireEvent.transitionEnd(stage!, { propertyName: "transform" });
     expect(screen.getByText("What should the agent remember?")).toBeInTheDocument();

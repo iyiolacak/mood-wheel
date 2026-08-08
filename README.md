@@ -11,8 +11,9 @@ fonts, or third-party icons.
 
 The sound cues ship with the packages and are played only from a user gesture or
 an explicit answer transition. `MOOD_WHEEL_ASSETS` exposes the wheel's exact
-wheel/pointer/tick URLs, and `AGENT_QUESTIONS_ASSETS` exposes the exact question
-reveal cue if your host needs to preload or route audio through its own mixer.
+wheel/pointer/tick URLs, and `AGENT_QUESTIONS_ASSETS` exposes the exact answered
+impact and question reveal cues if your host needs to preload or route audio
+through its own mixer.
 
 ## Install the full agent question UI
 

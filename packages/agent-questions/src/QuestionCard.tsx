@@ -35,18 +35,10 @@ type QuestionCardProps = {
   ambientVelocityY: number;
 };
 
-function CheckIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" className="muzluk-agent-questions__small-icon">
-      <path d="m4.5 10.5 3.4 3.4 7.6-8" />
-    </svg>
-  );
-}
-
-function defaultOption(option: QuestionOption, index: number) {
+function defaultOption(option: QuestionOption, index: number, selected: boolean) {
   return (
     <>
-      <span className="muzluk-agent-questions__option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span>
+      <span className="muzluk-agent-questions__option-letter" aria-hidden="true">{selected ? "✓" : String.fromCharCode(65 + index)}</span>
       <span className="muzluk-agent-questions__option-copy">
         <span>{option.label}</span>
         {option.description ? <small>{option.description}</small> : null}
@@ -188,7 +180,7 @@ export function QuestionCard({
   locale,
   messages,
   disabled,
-  lockedAnswer,
+  lockedAnswer: _lockedAnswer,
   answeredValue,
   preview = false,
   textDraft,
@@ -201,36 +193,19 @@ export function QuestionCard({
   onNumberDraft,
   onSubmit,
   onHeight,
-  answerPulse,
-  revealPulse,
+  answerPulse: _answerPulse,
+  revealPulse: _revealPulse,
   sound,
-  resolving = false,
+  resolving: _resolving = false,
   ambientVelocityY,
 }: QuestionCardProps) {
   const rootRef = React.useRef<HTMLElement | null>(null);
   const [voiceError, setVoiceError] = React.useState<string | null>(null);
-  const [answerResolving, setAnswerResolving] = React.useState(false);
-  const [revealing, setRevealing] = React.useState(false);
-  const locked = lockedAnswer !== undefined;
   const validMoodWheel = hasAuthoredMoodStops(question);
-
-  React.useEffect(() => {
-    if (preview || answerPulse === 0) return;
-    setAnswerResolving(true);
-    const timer = window.setTimeout(() => setAnswerResolving(false), 340);
-    return () => window.clearTimeout(timer);
-  }, [answerPulse, preview]);
-
-  React.useEffect(() => {
-    if (preview || revealPulse === 0) return;
-    setRevealing(true);
-    const timer = window.setTimeout(() => setRevealing(false), 260);
-    return () => window.clearTimeout(timer);
-  }, [preview, revealPulse]);
 
   React.useLayoutEffect(() => {
     const node = rootRef.current;
-    if (!node || preview) return;
+    if (!node) return;
     const measure = () => {
       onHeight(Math.ceil(node.getBoundingClientRect().height));
     };
@@ -239,28 +214,27 @@ export function QuestionCard({
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [onHeight, preview, question.id, textDraft, voiceError]);
+  }, [onHeight, question.id, textDraft, voiceError]);
 
   return (
-    <article ref={rootRef} className="muzluk-agent-questions__card" aria-hidden={preview || undefined} data-preview={preview || undefined} data-resolving={(resolving || answerResolving) || undefined} data-revealing={revealing || undefined}>
+    <article ref={rootRef} className="muzluk-agent-questions__card" aria-hidden={preview || undefined} data-preview={preview || undefined}>
       <div className="muzluk-agent-questions__prompt">
         <p>{question.prompt}</p>
         {question.note ? <small>{question.note}</small> : null}
       </div>
 
-      {locked && question.kind !== "mood-wheel" ? (
-        <div className="muzluk-agent-questions__locked"><CheckIcon /><span>{String(lockedAnswer)}</span></div>
-      ) : question.kind === "choice" ? (
+      {question.kind === "choice" ? (
         <div className="muzluk-agent-questions__choice-list" data-compact={hasCompactChoices(question)}>
           {question.options.map((option, index) => (
             <button
               type="button"
               key={option.value}
               className="muzluk-agent-questions__option"
+              data-selected={answeredValue === option.value || undefined}
               disabled={disabled || preview}
               onClick={() => onSubmit(option.value, option.label)}
             >
-              {renderOption?.(option, { selected: false, index }) ?? defaultOption(option, index)}
+              {renderOption?.(option, { selected: answeredValue === option.value, index }) ?? defaultOption(option, index, answeredValue === option.value)}
             </button>
           ))}
           {question.allowCustomAnswer ? (
