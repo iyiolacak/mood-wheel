@@ -62,6 +62,8 @@ export type MoodWheelProps<Value extends string = string> = Readonly<{
   showHint?: boolean;
   /** Matches the two source layouts used by the web experience. */
   layoutVariant?: "default" | "ultraWide";
+  /** Vertical host velocity in px/s lets the loose pointer react when its whole surface moves. */
+  ambientVelocityY?: number;
   /** Lets a host gate the first interaction while an answer is busy. */
   onAttemptInteract?: () => boolean;
   onChange?: (change: MoodWheelChange<Value>) => void;
@@ -316,6 +318,7 @@ export function MoodWheel<Value extends string = string>({
   showControls = true,
   showHint = true,
   layoutVariant = "default",
+  ambientVelocityY = 0,
   onAttemptInteract,
   onChange,
   onDetent,
@@ -346,6 +349,7 @@ export function MoodWheel<Value extends string = string>({
   const [runtimeReadyToken, setRuntimeReadyToken] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const hintSpinPlayedRef = React.useRef(false);
+  const previousAmbientVelocityRef = React.useRef(0);
   const [hintSpinActive, setHintSpinActive] = React.useState(false);
   selectedIndexRef.current = selectedIndex;
   reduceMotionRef.current = reducedMotion;
@@ -429,6 +433,17 @@ export function MoodWheel<Value extends string = string>({
       }
     }
   }, [options.length, reducedMotion, selectedIndex]);
+
+  React.useEffect(() => {
+    const runtime = runtimeRef.current;
+    const previous = previousAmbientVelocityRef.current;
+    previousAmbientVelocityRef.current = ambientVelocityY;
+    if (!runtime || reducedMotion) return;
+    const lean = Math.max(-0.13, Math.min(0.13, -ambientVelocityY / 3_600));
+    const impulse = Math.max(-1.1, Math.min(1.1, (ambientVelocityY - previous) / 2_400));
+    runtime.targetPointerLean = lean;
+    runtime.pointerShakeVelocity += impulse;
+  }, [ambientVelocityY, reducedMotion]);
 
   React.useEffect(() => {
     const root = mountRef.current;
@@ -748,7 +763,13 @@ export function MoodWheel<Value extends string = string>({
           src={assets.wheel}
           style={{ transform: `translate(-50%, 48%) rotate(${rotation}rad)`, transition: dragging ? "none" : undefined }}
         />
-        <img alt="" aria-hidden="true" className="muzluk-mood-wheel__fallback-pointer" src={assets.pointer} />
+        <img
+          alt=""
+          aria-hidden="true"
+          className="muzluk-mood-wheel__fallback-pointer"
+          src={assets.pointer}
+          style={{ transform: `translateX(-50%) rotate(${reducedMotion ? 0 : Math.max(-0.13, Math.min(0.13, -ambientVelocityY / 3_600))}rad)` }}
+        />
       </div>
 
       {showControls ? (

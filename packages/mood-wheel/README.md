@@ -36,6 +36,10 @@ before settling. The first-use sweep uses the source cubic-bezier
 `cubic-bezier(0.65, 0, 0.35, 1)`; `prefers-reduced-motion` disables the sweep,
 spring, and shake.
 
+When the wheel lives inside another moving surface, pass that surface's vertical
+velocity in pixels per second through `ambientVelocityY`. The loose pointer will
+lag, lean, and recoil while the wheel geometry stays locked to its five detents.
+
 Use CSS variables such as `--mw-surface`, `--mw-text`, `--mw-muted`, and
 `--mw-focus` to match an existing product. Stable `value` fields are returned
 to application code; translated labels remain presentation-only.

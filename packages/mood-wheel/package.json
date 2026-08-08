@@ -1,6 +1,6 @@
 {
   "name": "@muzluk/mood-wheel",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A tactile, accessible React mood wheel with drag, detents, sound, and owned hand-drawn assets.",
   "license": "MIT",
   "type": "module",

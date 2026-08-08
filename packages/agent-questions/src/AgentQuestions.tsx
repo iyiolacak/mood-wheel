@@ -26,7 +26,9 @@ const SWIPE_VELOCITY = 420;
 const MAX_DRAG_RATIO = 0.94;
 
 type DragState = {
+  axis: "pending" | "vertical";
   pointerId: number;
+  startX: number;
   startY: number;
   previousY: number;
   previousAt: number;
@@ -37,6 +39,12 @@ type SpringState = {
   value: number;
   velocity: number;
 };
+
+type PageTransition = Readonly<{
+  durationMs: number;
+  index: number;
+  offset: number;
+}>;
 
 /** A tiny interruptible spring keeps paging and measured-height changes physical without a motion dependency. */
 function useSpringNumber(target: number, immediate: boolean, config: { stiffness: number; damping: number; mass: number }) {
@@ -87,7 +95,6 @@ export type AgentQuestionsProps = Readonly<{
   initialStep?: number;
   locale?: string;
   messages?: Partial<AgentQuestionMessages>;
-  title?: React.ReactNode;
   status?: string;
   theme?: "classic" | "ribbon";
   sound?: boolean;
@@ -149,7 +156,7 @@ function resultFor(
 
 function canStartPageSwipe(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
-  return !target.closest("textarea, input, select, [contenteditable='true'], [data-no-question-swipe]");
+  return !target.closest("textarea, input, select, [contenteditable='true']");
 }
 
 /** Pointer capture can disappear during a native scroll or browser handoff. */
@@ -182,7 +189,6 @@ export function AgentQuestions({
   initialStep = 0,
   locale = "en",
   messages: messageOverrides,
-  title,
   status,
   theme = "classic",
   sound = true,
@@ -215,6 +221,8 @@ export function AgentQuestions({
   const [height, setHeight] = React.useState(FALLBACK_HEIGHT);
   const [dragY, setDragY] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
+  const [pageTransition, setPageTransition] = React.useState<PageTransition | null>(null);
+  const [reelVelocityY, setReelVelocityY] = React.useState(0);
   const [answerPulse, setAnswerPulse] = React.useState(0);
   const [answerCue, setAnswerCue] = React.useState<AnswerCueValue | null>(null);
   const [revealPulse, setRevealPulse] = React.useState(0);
@@ -260,6 +268,8 @@ export function AgentQuestions({
     setRevealPulse(0);
     setDragY(0);
     setDragging(false);
+    setPageTransition(null);
+    setReelVelocityY(0);
     latestCompletionRef.current = null;
     previousActiveRef.current = null;
   }, [signature]);
@@ -276,9 +286,47 @@ export function AgentQuestions({
   const active = questions[activeIndex];
   const previous = questions[activeIndex - 1];
   const next = questions[activeIndex + 1];
-  const busy = pendingId !== null;
+  const paging = pageTransition !== null;
+  const busy = pendingId !== null || paging;
   const animatedHeight = useSpringNumber(height, reducedMotion, { stiffness: 420, damping: 44, mass: 0.7 });
   const animatedDragY = useSpringNumber(dragY, dragging || reducedMotion, { stiffness: 470, damping: 42, mass: 0.72 });
+
+  /** Moves the measured reel a full card before atomically adopting its neighbor. */
+  const requestNavigation = React.useCallback((index: number, releaseVelocityY = 0) => {
+    const target = Math.max(0, Math.min(index, questions.length - 1));
+    if (target === activeIndex || pageTransition) return;
+    setConfirmSkipId(null);
+    setDragY(0);
+    if (reducedMotion) {
+      setActiveIndex(target);
+      return;
+    }
+    const direction = target > activeIndex ? 1 : -1;
+    const offset = direction > 0 ? -(height + CARD_GAP) : height + CARD_GAP;
+    const durationMs = Math.round(Math.max(260, Math.min(430, 430 - Math.abs(releaseVelocityY) * 0.08)));
+    setReelVelocityY(offset / Math.max(durationMs / 1_000, 0.001));
+    setPageTransition({
+      durationMs,
+      index: target,
+      offset,
+    });
+  }, [activeIndex, height, pageTransition, questions.length, reducedMotion]);
+
+  /** Transition events can be suppressed by a host tab switch, so paging also has a deterministic settle fallback. */
+  const completePageTransition = React.useCallback(() => {
+    if (!pageTransition) return;
+    const target = pageTransition.index;
+    setPageTransition(null);
+    setDragY(0);
+    setReelVelocityY(0);
+    setActiveIndex(target);
+  }, [pageTransition]);
+
+  React.useEffect(() => {
+    if (!pageTransition) return;
+    const timer = window.setTimeout(completePageTransition, 520);
+    return () => window.clearTimeout(timer);
+  }, [completePageTransition, pageTransition]);
 
   const finish = React.useCallback(async (nextResult: AgentQuestionResult) => {
     latestCompletionRef.current = nextResult;
@@ -317,14 +365,14 @@ export function AgentQuestions({
       if (activeIndex >= questions.length - 1) {
         await finish(resultFor(questions, nextAnswers, nextSkipped));
       } else {
-        setActiveIndex((current) => Math.min(current + 1, questions.length - 1));
+        requestNavigation(activeIndex + 1);
       }
     } catch {
       setError(messages.error);
     } finally {
       setPendingId(null);
     }
-  }, [activeIndex, answers, busy, completed, finish, messages.error, onAnswer, questions, reducedMotion, skipped]);
+  }, [activeIndex, answers, busy, completed, finish, messages.error, onAnswer, questions, reducedMotion, requestNavigation, skipped]);
 
   const skipQuestion = React.useCallback(async (question: AgentQuestion, confirmLast = false) => {
     if (busy || completed || question.required) return;
@@ -344,34 +392,34 @@ export function AgentQuestions({
       if (isLast) {
         await finish(resultFor(questions, answers, nextSkipped));
       } else {
-        setActiveIndex((current) => Math.min(current + 1, questions.length - 1));
+        requestNavigation(activeIndex + 1);
       }
     } catch {
       setError(messages.error);
     } finally {
       setPendingId(null);
     }
-  }, [activeIndex, answers, busy, completed, finish, messages.error, onSkip, questions, skipped]);
+  }, [activeIndex, answers, busy, completed, finish, messages.error, onSkip, questions, requestNavigation, skipped]);
 
   const goBackward = React.useCallback(() => {
     if (busy || dragging || activeIndex <= 0) return;
-    setConfirmSkipId(null);
-    setActiveIndex((current) => Math.max(0, current - 1));
-  }, [activeIndex, busy, dragging]);
+    requestNavigation(activeIndex - 1);
+  }, [activeIndex, busy, dragging, requestNavigation]);
 
   const goForward = React.useCallback(async () => {
     if (!active || busy || dragging || activeIndex >= questions.length - 1) return;
     if (answers[active.id] || skipped.has(active.id)) {
-      setActiveIndex((current) => Math.min(questions.length - 1, current + 1));
+      requestNavigation(activeIndex + 1);
       return;
     }
     await skipQuestion(active, true);
-  }, [active, activeIndex, answers, busy, dragging, questions.length, skipQuestion, skipped]);
+  }, [active, activeIndex, answers, busy, dragging, questions.length, requestNavigation, skipQuestion, skipped]);
 
   const resetDrag = React.useCallback(() => {
     dragRef.current = null;
     setDragging(false);
     setDragY(0);
+    setReelVelocityY(0);
   }, []);
 
   async function releaseDrag(event: React.PointerEvent<HTMLDivElement>) {
@@ -383,9 +431,13 @@ export function AgentQuestions({
     const forward = distance < 0;
     resetDrag();
     releasePointerSafely(event.currentTarget, event.pointerId);
-    if (!commit) return;
-    if (forward) await goForward();
-    else goBackward();
+    if (!commit || !active) return;
+    if (forward) {
+      if (answers[active.id] || skipped.has(active.id)) requestNavigation(activeIndex + 1, drag.velocityY);
+      else await skipQuestion(active, true);
+    } else if (activeIndex > 0) {
+      requestNavigation(activeIndex - 1, drag.velocityY);
+    }
   }
 
   if (!active || questions.length === 0) return null;
@@ -394,10 +446,12 @@ export function AgentQuestions({
   const progress = ((activeIndex + 1) / questions.length) * 100;
   const formatter = new Intl.NumberFormat(locale);
   const position = `${formatter.format(activeIndex + 1)}/${formatter.format(questions.length)}`;
-  const stageTransform = `translate3d(0, ${animatedDragY}px, 0)`;
+  const stageOffset = pageTransition?.offset ?? animatedDragY;
+  const stageTransform = `translate3d(0, ${stageOffset}px, 0)`;
   const commitDistance = Math.min(Math.max(height, 1) * SWIPE_RATIO, SWIPE_DISTANCE);
-  const commitProgress = Math.max(0, Math.min(Math.abs(dragY) / Math.max(commitDistance, 1), 1));
-  const dragDirection = dragY < 0 ? 1 : dragY > 0 ? -1 : 0;
+  const directProgress = Math.max(0, Math.min(Math.abs(dragY) / Math.max(commitDistance, 1), 1));
+  const commitProgress = pageTransition ? 1 : directProgress;
+  const dragDirection = stageOffset < 0 ? 1 : stageOffset > 0 ? -1 : 0;
 
   const card = (question: AgentQuestion, preview: boolean) => (
     <QuestionCard
@@ -425,6 +479,7 @@ export function AgentQuestions({
       answerPulse={answerPulse}
       revealPulse={revealPulse}
       resolving={!preview && pendingId === question.id}
+      ambientVelocityY={reelVelocityY}
     />
   );
 
@@ -436,10 +491,9 @@ export function AgentQuestions({
       data-status={status}
       data-complete={completed || undefined}
     >
-      {title || onDismiss ? (
+      {onDismiss ? (
         <header className="muzluk-agent-questions__header">
-          <div className="muzluk-agent-questions__title">{title}</div>
-          {onDismiss ? <button type="button" className="muzluk-agent-questions__dismiss" onClick={onDismiss} aria-label={messages.dismiss}><CloseIcon /></button> : null}
+          <button type="button" className="muzluk-agent-questions__dismiss" onClick={onDismiss} aria-label={messages.dismiss}><CloseIcon /></button>
         </header>
       ) : null}
 
@@ -459,6 +513,7 @@ export function AgentQuestions({
         style={{ height: animatedHeight }}
         data-active-index={activeIndex}
         data-dragging={dragging || undefined}
+        data-paging={paging || undefined}
         onClickCapture={(event) => {
           if (!dragConsumedRef.current) return;
           event.preventDefault();
@@ -469,30 +524,51 @@ export function AgentQuestions({
         <AnswerCue cue={answerCue} reducedMotion={reducedMotion} className="muzluk-agent-questions__answer-cue" />
         <div
           className="muzluk-agent-questions__stage"
-          style={{ transform: stageTransform }}
+          style={{
+            transform: stageTransform,
+            "--aq-page-duration": `${pageTransition?.durationMs ?? 430}ms`,
+          } as React.CSSProperties}
           tabIndex={0}
+          onTransitionEnd={(event) => {
+            if (event.propertyName !== "transform" || event.target !== event.currentTarget || !pageTransition) return;
+            completePageTransition();
+          }}
           onPointerDown={(event) => {
-            if (event.pointerType === "mouse" || busy || !canStartPageSwipe(event.target)) return;
+            if (busy || paging || !canStartPageSwipe(event.target)) return;
             dragRef.current = {
+              axis: "pending",
               pointerId: event.pointerId,
+              startX: event.clientX,
               startY: event.clientY,
               previousY: event.clientY,
               previousAt: performance.now(),
               velocityY: 0,
             };
             dragConsumedRef.current = false;
-            setDragging(true);
-            capturePointerSafely(event.currentTarget, event.pointerId);
           }}
           onPointerMove={(event) => {
             const drag = dragRef.current;
             if (!drag || drag.pointerId !== event.pointerId) return;
+            const horizontalDistance = event.clientX - drag.startX;
+            const verticalDistance = event.clientY - drag.startY;
+            if (drag.axis === "pending") {
+              if (Math.max(Math.abs(horizontalDistance), Math.abs(verticalDistance)) < 8) return;
+              if (Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.08) {
+                dragRef.current = null;
+                setDragging(false);
+                return;
+              }
+              drag.axis = "vertical";
+              setDragging(true);
+              capturePointerSafely(event.currentTarget, event.pointerId);
+            }
             const now = performance.now();
             const elapsed = Math.max(1, now - drag.previousAt);
             drag.velocityY = ((event.clientY - drag.previousY) / elapsed) * 1_000;
+            setReelVelocityY((current) => current * 0.68 + drag.velocityY * 0.32);
             drag.previousY = event.clientY;
             drag.previousAt = now;
-            const raw = event.clientY - drag.startY;
+            const raw = verticalDistance;
             if (Math.abs(raw) > 10) dragConsumedRef.current = true;
             const blockedBack = raw > 0 && activeIndex <= 0;
             const blockedForward = raw < 0 && (activeIndex >= questions.length - 1 || active.required && !currentAnswer);
@@ -503,6 +579,7 @@ export function AgentQuestions({
           onPointerUp={(event) => void releaseDrag(event)}
           onPointerCancel={(event) => {
             resetDrag();
+            setReelVelocityY(0);
             releasePointerSafely(event.currentTarget, event.pointerId);
           }}
           onWheel={(event) => {
@@ -519,7 +596,7 @@ export function AgentQuestions({
           }}
         >
           {previous ? <div className="muzluk-agent-questions__neighbor" style={{ top: -(height + CARD_GAP), transform: `scale(${dragDirection < 0 ? 0.96 + commitProgress * 0.04 : 0.96})`, opacity: dragDirection < 0 ? 0.9 + commitProgress * 0.1 : 0.9 }}>{card(previous, true)}</div> : null}
-          <div className="muzluk-agent-questions__current-card">{card(active, false)}</div>
+          <div className="muzluk-agent-questions__current-card" style={{ transform: `scale(${1 - commitProgress * 0.015})` }}>{card(active, false)}</div>
           {next ? <div className="muzluk-agent-questions__neighbor" style={{ top: height + CARD_GAP, transform: `scale(${dragDirection > 0 ? 0.96 + commitProgress * 0.04 : 0.96})`, opacity: dragDirection > 0 ? 0.9 + commitProgress * 0.1 : 0.9 }}>{card(next, true)}</div> : null}
         </div>
       </div>

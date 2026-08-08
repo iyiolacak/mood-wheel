@@ -31,6 +31,7 @@ type QuestionCardProps = {
   revealPulse: number;
   sound: boolean;
   resolving?: boolean;
+  ambientVelocityY: number;
 };
 
 function CheckIcon() {
@@ -152,6 +153,7 @@ export function QuestionCard({
   revealPulse,
   sound,
   resolving = false,
+  ambientVelocityY,
 }: QuestionCardProps) {
   const rootRef = React.useRef<HTMLElement | null>(null);
   const [voiceError, setVoiceError] = React.useState<string | null>(null);
@@ -194,7 +196,7 @@ export function QuestionCard({
         {question.note ? <small>{question.note}</small> : null}
       </div>
 
-      {locked ? (
+      {locked && question.kind !== "mood-wheel" ? (
         <div className="muzluk-agent-questions__locked"><CheckIcon /><span>{String(lockedAnswer)}</span></div>
       ) : question.kind === "choice" ? (
         <div className="muzluk-agent-questions__choice-list" data-compact={hasCompactChoices(question)}>
@@ -226,12 +228,13 @@ export function QuestionCard({
           {voiceError ? <p className="muzluk-agent-questions__field-error" role="alert">{voiceError}</p> : null}
         </form>
       ) : question.kind === "mood-wheel" ? (
-        <div className="muzluk-agent-questions__wheel-answer" data-no-question-swipe>
+        <div className="muzluk-agent-questions__wheel-answer">
           <MoodWheel
             options={question.options}
             value={wheelDraft ?? question.defaultValue}
             disabled={disabled || preview}
             sound={sound}
+            ambientVelocityY={ambientVelocityY}
             messages={{ hint: messages.hint, ariaLabel: question.prompt }}
             onChange={({ option }) => onWheelDraft(option.value)}
           />

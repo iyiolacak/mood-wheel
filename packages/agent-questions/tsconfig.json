@@ -1,9 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "rootDir": "src",
     "noEmit": false,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "paths": {
+      "@muzluk/mood-wheel": ["../mood-wheel/dist/index.d.ts"]
+    }
   },
   "include": ["src"]
 }

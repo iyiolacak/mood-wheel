@@ -33,3 +33,6 @@ Set `sound={false}` for a silent host, or pass `assets={{ reveal: ... }}`. The
 exact bundled reveal cue is also available as `AGENT_QUESTIONS_ASSETS.reveal`.
 Its default theme reproduces Muzluk's compact dark composer shelf; every semantic
 color remains overridable through the documented `--aq-*` custom properties.
+Cards can be dragged vertically with touch or a mouse. Horizontal intent stays
+with the Mood Wheel, while vertical release velocity drives the reel landing and
+the wheel pointer's inertial lean.

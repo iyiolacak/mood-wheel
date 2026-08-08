@@ -27,6 +27,25 @@ afterEach(() => {
 });
 
 describe("AgentQuestions", () => {
+  it("slides the measured reel to its neighbor before committing the next card", async () => {
+    vi.useFakeTimers();
+    const { container } = render(<AgentQuestions questions={questions} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Deep work/i }));
+    await act(async () => undefined);
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const stage = container.querySelector<HTMLElement>(".muzluk-agent-questions__stage");
+    expect(stage?.style.transform).toBe("translate3d(0, -232px, 0)");
+    expect(screen.getByText("What moved?")).toBeInTheDocument();
+
+    fireEvent.transitionEnd(stage!, { propertyName: "transform" });
+    expect(screen.getByText("What should the agent remember?")).toBeInTheDocument();
+  });
+
   it("commits a stable choice before advancing", async () => {
     vi.useFakeTimers();
     const onAnswer = vi.fn();
@@ -41,7 +60,7 @@ describe("AgentQuestions", () => {
       label: "Deep work",
     }));
 
-    act(() => vi.advanceTimersByTime(200));
+    act(() => vi.advanceTimersByTime(750));
     await act(async () => undefined);
     expect(screen.getByText("What should the agent remember?")).toBeInTheDocument();
   });

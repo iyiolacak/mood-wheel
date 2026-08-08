@@ -1,6 +1,6 @@
 {
   "name": "@muzluk/agent-questions",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A swipeable React question reel for agent follow-ups, with choices, text, scales, time, and a tactile mood wheel.",
   "license": "MIT",
   "type": "module",
@@ -28,7 +28,7 @@
     "test": "vitest run ../../packages/agent-questions/test"
   },
   "dependencies": {
-    "@muzluk/mood-wheel": "^0.1.1",
+    "@muzluk/mood-wheel": "^0.1.2",
     "zod": "^4.4.0"
   },
   "peerDependencies": {
