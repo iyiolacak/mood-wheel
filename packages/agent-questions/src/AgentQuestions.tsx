@@ -166,7 +166,7 @@ function resultFor(
 
 function canStartPageSwipe(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
-  return !target.closest("textarea, input, select, [contenteditable='true']");
+  return !target.closest("textarea, input, select, [contenteditable='true'], [data-no-question-swipe]");
 }
 
 /** Pointer capture can disappear during a native scroll or browser handoff. */

@@ -37,6 +37,18 @@ component does not persist anything on its own.
 Use `parseAgentQuestions` or `safeParseAgentQuestions` on all model/network
 output before rendering it.
 
+### `AdvancedSlider`
+
+The focus-time ruler is also exported as a standalone controlled or uncontrolled
+primitive. It accepts `min`, `max`, `step`, `majorStep`, `value`/`defaultValue`,
+`unit`, value formatters, milestone and zone-break arrays, and change/commit/
+detent callbacks. `ADVANCED_SLIDER_ASSETS` exposes the four alternating ruler
+ticks and milestone impact cue.
+
+The rail follows the finger directly, rubber-bands outside its range, projects
+measured release velocity for 120ms, and lands with Muzluk's
+`damping: 31, mass: 0.72, stiffness: 430` spring.
+
 ## `@muzluk/mood-wheel`
 
 ### `MoodWheel`

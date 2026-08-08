@@ -62,3 +62,7 @@ provider for you.
 `time` and `scale` questions use the tactile tick rail rather than the browser's
 native range input. Set `expandable: true` on a time question to reveal another
 range when the person reaches its authored maximum.
+
+The same focus-time ruler is exported as `AdvancedSlider` for use outside a
+question reel. Its exact four tick variants and milestone impact are available
+through `ADVANCED_SLIDER_ASSETS`.

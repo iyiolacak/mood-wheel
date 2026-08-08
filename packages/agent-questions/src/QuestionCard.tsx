@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { MoodWheel } from "@muzluk/mood-wheel";
+import { AdvancedSlider } from "./AdvancedSlider";
 import type { AgentQuestion, QuestionOption } from "./schema";
 import type {
   AgentQuestionMessages,
@@ -73,6 +74,7 @@ function RangeAnswer({
   disabled,
   messages,
   locale,
+  sound,
   onValue,
   onSubmit,
 }: {
@@ -81,11 +83,10 @@ function RangeAnswer({
   disabled: boolean;
   messages: AgentQuestionMessages;
   locale: string;
+  sound: boolean;
   onValue: (value: number) => void;
   onSubmit: (value: number, label: string) => void;
 }) {
-  const railRef = React.useRef<HTMLDivElement | null>(null);
-  const dragRef = React.useRef<{ pointerId: number; previousX: number; velocityX: number } | null>(null);
   const [maximum, setMaximum] = React.useState(question.max);
   const selected = normalizeRangeValue(value ?? question.defaultValue ?? (question.min + question.max) / 2, question.min, maximum, question.step);
   const formatter = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
@@ -96,68 +97,29 @@ function RangeAnswer({
     setMaximum(question.max);
   }, [question.id, question.max]);
 
-  const ticks = React.useMemo(() => {
-    const count = Math.min(61, Math.max(2, Math.round((maximum - question.min) / question.step) + 1));
-    return Array.from({ length: count }, (_, index) => normalizeRangeValue(
-      question.min + ((maximum - question.min) * index) / Math.max(count - 1, 1),
-      question.min,
-      maximum,
-      question.step,
-    ));
-  }, [maximum, question.min, question.step]);
-
-  /** The finger moves the numbered rail, while the selection needle remains optically fixed. */
-  const updateFromPointer = React.useCallback((clientX: number) => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const bounds = rail.getBoundingClientRect();
-    const progress = Math.max(0, Math.min(1, (clientX - bounds.left) / Math.max(bounds.width, 1)));
-    onValue(normalizeRangeValue(question.min + progress * (maximum - question.min), question.min, maximum, question.step));
-  }, [maximum, onValue, question.min, question.step]);
+  const timeMilestones = question.kind === "time" ? [30, 60].filter((item) => item >= question.min && item <= maximum) : [];
+  const hugeMilestones = question.kind === "time" && 90 >= question.min && 90 <= maximum ? [90] : [];
 
   return (
     <div className="muzluk-agent-questions__range" data-kind={question.kind}>
-      <output className="muzluk-agent-questions__range-output">{label}</output>
-      <div
-        ref={railRef}
-        className="muzluk-agent-questions__range-rail"
-        role="slider"
-        tabIndex={disabled ? -1 : 0}
-        aria-label={question.prompt}
-        aria-valuetext={`${label}. ${question.minLabel} – ${question.maxLabel}.`}
-        aria-valuemin={question.min}
-        aria-valuemax={maximum}
-        aria-valuenow={selected}
-        onPointerDown={(event) => {
-          if (disabled) return;
-          dragRef.current = { pointerId: event.pointerId, previousX: event.clientX, velocityX: 0 };
-          event.currentTarget.setPointerCapture(event.pointerId);
-          updateFromPointer(event.clientX);
-        }}
-        onPointerMove={(event) => {
-          const drag = dragRef.current;
-          if (!drag || drag.pointerId !== event.pointerId || disabled) return;
-          drag.velocityX = drag.velocityX * 0.72 + (event.clientX - drag.previousX) * 0.28;
-          drag.previousX = event.clientX;
-          updateFromPointer(event.clientX);
-        }}
-        onPointerUp={(event) => {
-          if (dragRef.current?.pointerId !== event.pointerId) return;
-          dragRef.current = null;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerCancel={() => { dragRef.current = null; }}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft" || event.key === "ArrowDown") { event.preventDefault(); onValue(normalizeRangeValue(selected - question.step, question.min, maximum, question.step)); }
-          if (event.key === "ArrowRight" || event.key === "ArrowUp") { event.preventDefault(); onValue(normalizeRangeValue(selected + question.step, question.min, maximum, question.step)); }
-        }}
-      >
-        <span className="muzluk-agent-questions__range-track" aria-hidden="true">
-          {ticks.map((tick, index) => <i key={`${tick}:${index}`} data-major={index % 5 === 0 || index === ticks.length - 1} />)}
-        </span>
-        <span className="muzluk-agent-questions__range-fill" style={{ width: `${((selected - question.min) / Math.max(maximum - question.min, 1)) * 100}%` }} aria-hidden="true" />
-        <span className="muzluk-agent-questions__range-needle" style={{ left: `${((selected - question.min) / Math.max(maximum - question.min, 1)) * 100}%` }} aria-hidden="true" />
-      </div>
+      <AdvancedSlider
+        ariaLabel={question.prompt}
+        decrementLabel={messages.previousQuestion}
+        incrementLabel={messages.nextQuestion}
+        min={question.min}
+        max={maximum}
+        step={question.step}
+        majorStep={question.kind === "time" ? 5 : question.step}
+        value={selected}
+        disabled={disabled}
+        sound={sound}
+        formatValue={(nextValue) => formatter.format(nextValue)}
+        unit={unit}
+        milestoneValues={timeMilestones}
+        hugeMilestoneValues={hugeMilestones}
+        zoneBreakValues={[...timeMilestones, ...hugeMilestones]}
+        onValueChange={onValue}
+      />
       <div className="muzluk-agent-questions__range-labels">
         <span>{question.minLabel}</span>
         <span>{question.maxLabel}</span>
@@ -280,7 +242,7 @@ export function QuestionCard({
         </div>
       ) : (
         <div data-no-question-swipe>
-          <RangeAnswer question={question} value={numberDraft} disabled={disabled || preview} messages={messages} locale={locale} onValue={onNumberDraft} onSubmit={onSubmit} />
+          <RangeAnswer question={question} value={numberDraft} disabled={disabled || preview} messages={messages} locale={locale} sound={sound} onValue={onNumberDraft} onSubmit={onSubmit} />
         </div>
       )}
     </article>
