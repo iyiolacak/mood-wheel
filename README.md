@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/5f458e83-8440-4107-96a3-8222ae8b575b
+
 # Agent questions people actually answer
 
 Two MIT React packages extracted from Muzluk's web question experience:
