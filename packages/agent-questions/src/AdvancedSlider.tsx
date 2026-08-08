@@ -330,7 +330,6 @@ export function AdvancedSlider({
             );
           })}
         </div>
-        <span className="muzluk-advanced-slider__indicator" aria-hidden="true" key={`indicator:${currentValue}`}><i /><b /></span>
       </div>
 
       <div className="muzluk-advanced-slider__footer">
