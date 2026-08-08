@@ -197,7 +197,7 @@ export function QuestionCard({
             <form className="muzluk-agent-questions__text-row" onSubmit={(event) => { event.preventDefault(); if (textDraft.trim()) onSubmit(textDraft.trim(), textDraft.trim()); }}>
               <textarea value={textDraft} disabled={disabled || preview} rows={1} placeholder={question.placeholder ?? messages.customAnswer} onChange={(event) => onTextDraft(event.currentTarget.value)} />
               {!textDraft.trim() ? <VoiceAnswer compact disabled={disabled || preview} locale={locale} messages={messages} question={question} transcribe={transcribe} onText={onTextDraft} onError={setVoiceError} /> : null}
-              <button type="submit" className="muzluk-agent-questions__send" disabled={disabled || preview || !textDraft.trim()} aria-label={messages.submit}>↗</button>
+              <button type="submit" className="muzluk-agent-questions__send" disabled={disabled || preview || !textDraft.trim()} aria-label={messages.submit}>{messages.submit}</button>
             </form>
           ) : null}
         </div>
