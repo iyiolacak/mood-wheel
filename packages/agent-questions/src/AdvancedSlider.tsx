@@ -8,6 +8,7 @@ import tickThreeUrl from "./assets/slider-tick-3.wav";
 import tickFourUrl from "./assets/slider-tick-4.wav";
 import {
   buildAdvancedSliderTicks,
+  fitAdvancedSliderGeometry,
   getAdvancedSliderGeometry,
   normalizeAdvancedSliderValue,
   projectAdvancedSliderValue,
@@ -94,7 +95,14 @@ export function AdvancedSlider({
   const reducedMotion = useReducedMotion();
   const range = React.useMemo(() => resolveAdvancedSliderRange({ min, max, step, majorStep }), [majorStep, max, min, step]);
   const ticks = React.useMemo(() => buildAdvancedSliderTicks(range), [range]);
-  const geometry = React.useMemo(() => getAdvancedSliderGeometry(range, ticks.length), [range, ticks.length]);
+  const baseGeometry = React.useMemo(() => getAdvancedSliderGeometry(range, ticks.length), [range, ticks.length]);
+  const [viewportWidth, setViewportWidth] = React.useState(0);
+  const geometry = React.useMemo(() => {
+    // A short authored range should occupy the whole control instead of leaving
+    // a tiny ruler in the middle. Long ranges keep the native-width ticks and
+    // become a freely browsable overflowing ruler.
+    return fitAdvancedSliderGeometry(baseGeometry, ticks.length, viewportWidth);
+  }, [baseGeometry, ticks.length, viewportWidth]);
   const initial = normalizeAdvancedSliderValue(value ?? defaultValue ?? (range.min + range.max) / 2, range);
   const [currentValue, setCurrentValue] = React.useState(initial);
   const [direction, setDirection] = React.useState<-1 | 0 | 1>(0);
@@ -199,8 +207,12 @@ export function AdvancedSlider({
     paint(visualValueRef.current, false);
     const viewport = viewportRef.current;
     if (!viewport || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => paint(visualValueRef.current, false));
+    const observer = new ResizeObserver(() => {
+      setViewportWidth(viewport.clientWidth);
+      paint(visualValueRef.current, false);
+    });
     observer.observe(viewport);
+    setViewportWidth(viewport.clientWidth);
     return () => observer.disconnect();
   }, [paint]);
 

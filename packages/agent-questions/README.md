@@ -63,6 +63,11 @@ provider for you.
 native range input. Set `expandable: true` on a time question to reveal another
 range when the person reaches its authored maximum.
 
+Keep `step: 1` when every minute is meaningful (for example, a 1–90 minute
+range). The rail keeps every detent, labels major positions, expands short
+ranges to fill the control, and lets long ranges browse through the overflowing
+tick ruler. `majorStep` changes labels only; it never removes selectable ticks.
+
 The same focus-time ruler is exported as `AdvancedSlider` for use outside a
 question reel. Its exact four tick variants and milestone impact are available
 through `ADVANCED_SLIDER_ASSETS`.

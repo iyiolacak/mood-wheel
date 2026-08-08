@@ -3,6 +3,7 @@ export { AdvancedSlider, ADVANCED_SLIDER_ASSETS } from "./AdvancedSlider";
 export type { AdvancedSliderProps } from "./AdvancedSlider";
 export {
   buildAdvancedSliderTicks,
+  fitAdvancedSliderGeometry,
   getAdvancedSliderGeometry,
   normalizeAdvancedSliderValue,
   projectAdvancedSliderValue,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAdvancedSliderTicks,
+  fitAdvancedSliderGeometry,
   getAdvancedSliderGeometry,
   normalizeAdvancedSliderValue,
   projectAdvancedSliderValue,
@@ -25,6 +26,20 @@ describe("advanced slider model", () => {
       tickBodyWidth: 8,
       tickSlotWidth: 11,
     });
+  });
+
+  it("keeps every one-minute detent in a 1–90 minute range", () => {
+    const range = resolveAdvancedSliderRange({ min: 1, max: 90, step: 1, majorStep: 5 });
+    expect(buildAdvancedSliderTicks(range)).toHaveLength(90);
+  });
+
+  it("stretches short rulers to fill the measured viewport", () => {
+    const range = resolveAdvancedSliderRange({ min: 1, max: 10, step: 1 });
+    const base = getAdvancedSliderGeometry(range, 10);
+    const fitted = fitAdvancedSliderGeometry(base, 10, 320);
+    expect(fitted.tickSlotWidth).toBe(32);
+    expect(fitted.pixelsPerStep).toBe(32);
+    expect(fitAdvancedSliderGeometry(base, 90, 320)).toEqual(base);
   });
 
   it("projects release velocity for the authored 120ms window", () => {

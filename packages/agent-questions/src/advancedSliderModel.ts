@@ -76,6 +76,22 @@ export function getAdvancedSliderGeometry(range: AdvancedSliderRange, tickCount:
   };
 }
 
+/** Fits a short ruler to its viewport while preserving compact overflow for long ranges. */
+export function fitAdvancedSliderGeometry(
+  baseGeometry: AdvancedSliderGeometry,
+  tickCount: number,
+  viewportWidth: number,
+): AdvancedSliderGeometry {
+  if (viewportWidth <= 0 || tickCount <= 0 || viewportWidth <= tickCount * baseGeometry.tickSlotWidth) return baseGeometry;
+  const tickSlotWidth = viewportWidth / tickCount;
+  return {
+    ...baseGeometry,
+    pixelsPerStep: tickSlotWidth,
+    tickBodyWidth: Math.max(7, tickSlotWidth - (baseGeometry.tickSlotWidth - baseGeometry.tickBodyWidth)),
+    tickSlotWidth,
+  };
+}
+
 /** Projects measured release velocity for 120ms, then selects one bounded detent. */
 export function projectAdvancedSliderValue({
   pixelsPerStep,

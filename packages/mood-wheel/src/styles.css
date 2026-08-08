@@ -26,8 +26,8 @@
   touch-action: none;
   cursor: grab;
   overflow: hidden;
-  border-radius: 0;
-  background: var(--mw-surface);
+  border-radius: 1rem;
+  background: #000;
   outline: none;
   user-select: none;
 }
