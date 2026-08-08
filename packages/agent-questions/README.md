@@ -36,3 +36,27 @@ color remains overridable through the documented `--aq-*` custom properties.
 Cards can be dragged vertically with touch or a mouse. Horizontal intent stays
 with the Mood Wheel, while vertical release velocity drives the reel landing and
 the wheel pointer's inertial lean.
+
+Pass a `transcribe` function to enable the built-in microphone control for text
+questions and custom choice answers. The browser records audio locally and hands
+your function the resulting `Blob`; the package never chooses or calls a speech
+provider for you.
+
+```tsx
+<AgentQuestions
+  questions={questions}
+  transcribe={async (recording, { question, locale }) => {
+    const body = new FormData();
+    body.append("recording", recording);
+    body.append("questionId", question.id);
+    body.append("locale", locale);
+    const response = await fetch("/api/transcribe", { method: "POST", body });
+    if (!response.ok) throw new Error("Transcription failed");
+    return (await response.json()).text;
+  }}
+/>
+```
+
+`time` and `scale` questions use the tactile tick rail rather than the browser's
+native range input. Set `expandable: true` on a time question to reveal another
+range when the person reaches its authored maximum.

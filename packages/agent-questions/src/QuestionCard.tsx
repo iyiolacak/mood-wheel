@@ -16,6 +16,7 @@ type QuestionCardProps = {
   messages: AgentQuestionMessages;
   disabled: boolean;
   lockedAnswer?: string | number;
+  answeredValue?: string | number;
   preview?: boolean;
   textDraft: string;
   wheelDraft?: string;
@@ -91,6 +92,8 @@ function RangeAnswer({
   onValue: (value: number) => void;
   onSubmit: (value: number, label: string) => void;
 }) {
+  const railRef = React.useRef<HTMLDivElement | null>(null);
+  const dragRef = React.useRef<{ pointerId: number; previousX: number; velocityX: number } | null>(null);
   const [maximum, setMaximum] = React.useState(question.max);
   const selected = normalizeRangeValue(value ?? question.defaultValue ?? (question.min + question.max) / 2, question.min, maximum, question.step);
   const formatter = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
@@ -101,20 +104,68 @@ function RangeAnswer({
     setMaximum(question.max);
   }, [question.id, question.max]);
 
+  const ticks = React.useMemo(() => {
+    const count = Math.min(61, Math.max(2, Math.round((maximum - question.min) / question.step) + 1));
+    return Array.from({ length: count }, (_, index) => normalizeRangeValue(
+      question.min + ((maximum - question.min) * index) / Math.max(count - 1, 1),
+      question.min,
+      maximum,
+      question.step,
+    ));
+  }, [maximum, question.min, question.step]);
+
+  /** The finger moves the numbered rail, while the selection needle remains optically fixed. */
+  const updateFromPointer = React.useCallback((clientX: number) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const bounds = rail.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (clientX - bounds.left) / Math.max(bounds.width, 1)));
+    onValue(normalizeRangeValue(question.min + progress * (maximum - question.min), question.min, maximum, question.step));
+  }, [maximum, onValue, question.min, question.step]);
+
   return (
-    <div className="muzluk-agent-questions__range">
+    <div className="muzluk-agent-questions__range" data-kind={question.kind}>
       <output className="muzluk-agent-questions__range-output">{label}</output>
-      <input
-        type="range"
+      <div
+        ref={railRef}
+        className="muzluk-agent-questions__range-rail"
+        role="slider"
+        tabIndex={disabled ? -1 : 0}
         aria-label={question.prompt}
         aria-valuetext={`${label}. ${question.minLabel} – ${question.maxLabel}.`}
-        min={question.min}
-        max={maximum}
-        step={question.step}
-        value={selected}
-        disabled={disabled}
-        onChange={(event) => onValue(Number(event.currentTarget.value))}
-      />
+        aria-valuemin={question.min}
+        aria-valuemax={maximum}
+        aria-valuenow={selected}
+        onPointerDown={(event) => {
+          if (disabled) return;
+          dragRef.current = { pointerId: event.pointerId, previousX: event.clientX, velocityX: 0 };
+          event.currentTarget.setPointerCapture(event.pointerId);
+          updateFromPointer(event.clientX);
+        }}
+        onPointerMove={(event) => {
+          const drag = dragRef.current;
+          if (!drag || drag.pointerId !== event.pointerId || disabled) return;
+          drag.velocityX = drag.velocityX * 0.72 + (event.clientX - drag.previousX) * 0.28;
+          drag.previousX = event.clientX;
+          updateFromPointer(event.clientX);
+        }}
+        onPointerUp={(event) => {
+          if (dragRef.current?.pointerId !== event.pointerId) return;
+          dragRef.current = null;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => { dragRef.current = null; }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" || event.key === "ArrowDown") { event.preventDefault(); onValue(normalizeRangeValue(selected - question.step, question.min, maximum, question.step)); }
+          if (event.key === "ArrowRight" || event.key === "ArrowUp") { event.preventDefault(); onValue(normalizeRangeValue(selected + question.step, question.min, maximum, question.step)); }
+        }}
+      >
+        <span className="muzluk-agent-questions__range-track" aria-hidden="true">
+          {ticks.map((tick, index) => <i key={`${tick}:${index}`} data-major={index % 5 === 0 || index === ticks.length - 1} />)}
+        </span>
+        <span className="muzluk-agent-questions__range-fill" style={{ width: `${((selected - question.min) / Math.max(maximum - question.min, 1)) * 100}%` }} aria-hidden="true" />
+        <span className="muzluk-agent-questions__range-needle" style={{ left: `${((selected - question.min) / Math.max(maximum - question.min, 1)) * 100}%` }} aria-hidden="true" />
+      </div>
       <div className="muzluk-agent-questions__range-labels">
         <span>{question.minLabel}</span>
         <span>{question.maxLabel}</span>
@@ -138,6 +189,7 @@ export function QuestionCard({
   messages,
   disabled,
   lockedAnswer,
+  answeredValue,
   preview = false,
   textDraft,
   wheelDraft,
@@ -214,6 +266,7 @@ export function QuestionCard({
           {question.allowCustomAnswer ? (
             <form className="muzluk-agent-questions__text-row" onSubmit={(event) => { event.preventDefault(); if (textDraft.trim()) onSubmit(textDraft.trim(), textDraft.trim()); }}>
               <textarea value={textDraft} disabled={disabled || preview} rows={1} placeholder={question.placeholder ?? messages.customAnswer} onChange={(event) => onTextDraft(event.currentTarget.value)} />
+              {!textDraft.trim() ? <VoiceAnswer compact disabled={disabled || preview} locale={locale} messages={messages} question={question} transcribe={transcribe} onText={onTextDraft} onError={setVoiceError} /> : null}
               <button type="submit" className="muzluk-agent-questions__send" disabled={disabled || preview || !textDraft.trim()} aria-label={messages.submit}>↗</button>
             </form>
           ) : null}
@@ -231,7 +284,7 @@ export function QuestionCard({
         <div className="muzluk-agent-questions__wheel-answer">
           <MoodWheel
             options={question.options}
-            value={wheelDraft ?? question.defaultValue}
+            value={(wheelDraft ?? (typeof answeredValue === "string" ? answeredValue : undefined) ?? question.defaultValue)}
             disabled={disabled || preview}
             sound={sound}
             ambientVelocityY={ambientVelocityY}
@@ -241,9 +294,9 @@ export function QuestionCard({
           <button
             type="button"
             className="muzluk-agent-questions__primary"
-            disabled={disabled || preview || !validMoodWheel || !(wheelDraft ?? question.defaultValue)}
+            disabled={disabled || preview || !validMoodWheel || !(wheelDraft ?? (typeof answeredValue === "string" ? answeredValue : undefined) ?? question.defaultValue)}
             onClick={() => {
-              const value = wheelDraft ?? question.defaultValue;
+              const value = wheelDraft ?? (typeof answeredValue === "string" ? answeredValue : undefined) ?? question.defaultValue;
               const option = question.options.find((candidate) => candidate.value === value);
               if (option) onSubmit(option.value, option.label);
             }}

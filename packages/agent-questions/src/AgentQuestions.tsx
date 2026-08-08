@@ -46,6 +46,12 @@ type PageTransition = Readonly<{
   offset: number;
 }>;
 
+type WheelGesture = {
+  offset: number;
+  previousAt: number;
+  velocityY: number;
+};
+
 /** A tiny interruptible spring keeps paging and measured-height changes physical without a motion dependency. */
 function useSpringNumber(target: number, immediate: boolean, config: { stiffness: number; damping: number; mass: number }) {
   const stateRef = React.useRef<SpringState>({ value: target, velocity: 0 });
@@ -91,6 +97,7 @@ function useSpringNumber(target: number, immediate: boolean, config: { stiffness
 
 export type AgentQuestionsProps = Readonly<{
   questions: readonly AgentQuestion[];
+  title?: React.ReactNode;
   initialAnswers?: readonly AgentQuestionAnswer[];
   initialStep?: number;
   locale?: string;
@@ -185,6 +192,7 @@ function releasePointerSafely(element: Element, pointerId: number) {
  */
 export function AgentQuestions({
   questions,
+  title,
   initialAnswers = [],
   initialStep = 0,
   locale = "en",
@@ -228,7 +236,8 @@ export function AgentQuestions({
   const [revealPulse, setRevealPulse] = React.useState(0);
   const dragRef = React.useRef<DragState | null>(null);
   const dragConsumedRef = React.useRef(false);
-  const wheelLockRef = React.useRef(0);
+  const wheelGestureRef = React.useRef<WheelGesture | null>(null);
+  const wheelSettleRef = React.useRef<number | null>(null);
   const previousActiveRef = React.useRef<number | null>(null);
   const latestCompletionRef = React.useRef<AgentQuestionResult | null>(null);
   const revealAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -272,7 +281,14 @@ export function AgentQuestions({
     setReelVelocityY(0);
     latestCompletionRef.current = null;
     previousActiveRef.current = null;
+    if (wheelSettleRef.current !== null) window.clearTimeout(wheelSettleRef.current);
+    wheelSettleRef.current = null;
+    wheelGestureRef.current = null;
   }, [signature]);
+
+  React.useEffect(() => () => {
+    if (wheelSettleRef.current !== null) window.clearTimeout(wheelSettleRef.current);
+  }, []);
 
   React.useEffect(() => {
     if (previousActiveRef.current === activeIndex) return;
@@ -415,6 +431,25 @@ export function AgentQuestions({
     await skipQuestion(active, true);
   }, [active, activeIndex, answers, busy, dragging, questions.length, requestNavigation, skipQuestion, skipped]);
 
+  /** Trackpad and mouse-wheel input moves the same reel continuously, then commits at release. */
+  const settleWheelGesture = React.useCallback(async () => {
+    const gesture = wheelGestureRef.current;
+    wheelGestureRef.current = null;
+    wheelSettleRef.current = null;
+    if (!gesture || !active) return;
+    const commit = Math.abs(gesture.offset) >= Math.max(38, height * 0.12) || Math.abs(gesture.velocityY) >= SWIPE_VELOCITY;
+    setDragging(false);
+    setDragY(0);
+    setReelVelocityY(0);
+    if (!commit) return;
+    if (gesture.offset < 0) {
+      if (answers[active.id] || skipped.has(active.id)) requestNavigation(activeIndex + 1, gesture.velocityY);
+      else await skipQuestion(active, true);
+    } else if (activeIndex > 0) {
+      requestNavigation(activeIndex - 1, gesture.velocityY);
+    }
+  }, [active, activeIndex, answers, height, requestNavigation, skipQuestion, skipped]);
+
   const resetDrag = React.useCallback(() => {
     dragRef.current = null;
     setDragging(false);
@@ -461,6 +496,7 @@ export function AgentQuestions({
       messages={messages}
       disabled={busy || completed}
       lockedAnswer={answers[question.id]?.label ?? answers[question.id]?.value}
+      answeredValue={answers[question.id]?.value}
       preview={preview}
       textDraft={textDrafts[question.id] ?? ""}
       wheelDraft={wheelDrafts[question.id]}
@@ -491,6 +527,8 @@ export function AgentQuestions({
       data-status={status}
       data-complete={completed || undefined}
     >
+      {title ? <h2 className="muzluk-agent-questions__title">{title}</h2> : null}
+
       {onDismiss ? (
         <header className="muzluk-agent-questions__header">
           <button type="button" className="muzluk-agent-questions__dismiss" onClick={onDismiss} aria-label={messages.dismiss}><CloseIcon /></button>
@@ -584,11 +622,23 @@ export function AgentQuestions({
           }}
           onWheel={(event) => {
             if ((event.target as HTMLElement).closest("[data-no-question-swipe], input, textarea")) return;
-            if (Math.abs(event.deltaY) < 34 || Date.now() - wheelLockRef.current < 260) return;
+            if (Math.abs(event.deltaY) < 0.5 || busy) return;
             event.preventDefault();
-            wheelLockRef.current = Date.now();
-            if (event.deltaY > 0) void goForward();
-            else goBackward();
+            const now = performance.now();
+            const previous = wheelGestureRef.current;
+            const elapsed = Math.max(8, now - (previous?.previousAt ?? now - 16));
+            const signedDelta = -event.deltaY;
+            const blockedBack = signedDelta > 0 && activeIndex <= 0;
+            const blockedForward = signedDelta < 0 && (activeIndex >= questions.length - 1 || active.required && !currentAnswer);
+            const offset = Math.max(-height * MAX_DRAG_RATIO, Math.min(height * MAX_DRAG_RATIO, (previous?.offset ?? 0) + signedDelta * (blockedBack || blockedForward ? 0.18 : 0.72)));
+            const instantVelocity = (signedDelta / elapsed) * 1_000;
+            const velocityY = (previous?.velocityY ?? 0) * 0.62 + instantVelocity * 0.38;
+            wheelGestureRef.current = { offset, previousAt: now, velocityY };
+            setDragging(true);
+            setDragY(offset);
+            setReelVelocityY(velocityY);
+            if (wheelSettleRef.current !== null) window.clearTimeout(wheelSettleRef.current);
+            wheelSettleRef.current = window.setTimeout(() => void settleWheelGesture(), 86);
           }}
           onKeyDown={(event) => {
             if (["ArrowDown", "PageDown"].includes(event.key)) { event.preventDefault(); void goForward(); }

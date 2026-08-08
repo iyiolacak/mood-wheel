@@ -113,6 +113,8 @@ type PixiRuntime = {
   pointerPulse: number;
   wheelPulse: number;
   basePointerScale: number;
+  basePointerX: number;
+  basePointerY: number;
   baseWheelWrapScale: number;
   selectedKey: string;
 };
@@ -120,6 +122,7 @@ type PixiRuntime = {
 type DragState = {
   pointerId: number;
   startX: number;
+  startY: number;
   previousX: number;
   previousTime: number;
   velocityX: number;
@@ -207,6 +210,8 @@ function layoutPixi(runtime: PixiRuntime, width: number, height: number, layoutV
   const pointerScale = pointerHeight / Math.max(runtime.pointer.texture.height, 1);
   runtime.pointer.anchor.set(0.5, 0.92);
   runtime.pointer.position.set(width / 2, height + 2);
+  runtime.basePointerX = width / 2;
+  runtime.basePointerY = height + 2;
   runtime.pointer.scale.set(pointerScale);
   runtime.basePointerScale = pointerScale;
   runtime.baseWheelWrapScale = 1;
@@ -494,6 +499,8 @@ export function MoodWheel<Value extends string = string>({
           pointerPulse: 0,
           wheelPulse: 0,
           basePointerScale: 1,
+          basePointerX: 0,
+          basePointerY: 0,
           baseWheelWrapScale: 1,
           selectedKey: String(selectedIndexRef.current),
         } as unknown as PixiRuntime;
@@ -552,7 +559,11 @@ export function MoodWheel<Value extends string = string>({
           live.pointerShakeVelocity = Math.max(-9, Math.min(9, live.pointerShakeVelocity));
           live.pointerShake += live.pointerShakeVelocity * dt;
           live.pointerShake = Math.max(-0.1, Math.min(0.1, live.pointerShake));
-          live.pointer.rotation = live.pointerLean + live.pointerShake;
+          const pointerAngle = live.pointerLean + live.pointerShake;
+          live.pointer.rotation = pointerAngle;
+          // The loose pin does not rotate in a mathematically perfect fixed
+          // socket: its base slips a few pixels as inertia loads either side.
+          live.pointer.position.set(live.basePointerX + Math.sin(pointerAngle) * 7, live.basePointerY + Math.abs(pointerAngle) * 2);
 
           const wheelPulse = live.wheelPulse;
           if (wheelPulse > 0) {
@@ -676,6 +687,7 @@ export function MoodWheel<Value extends string = string>({
           dragRef.current = {
             pointerId: event.pointerId,
             startX: event.clientX,
+            startY: event.clientY,
             previousX: event.clientX,
             previousTime: event.timeStamp || performance.now(),
             velocityX: 0,
@@ -687,6 +699,14 @@ export function MoodWheel<Value extends string = string>({
         onPointerMove={(event) => {
           const drag = dragRef.current;
           if (!drag || drag.pointerId !== event.pointerId || disabled) return;
+          const totalX = event.clientX - drag.startX;
+          const totalY = event.clientY - drag.startY;
+          if (!drag.moved && Math.abs(totalY) > 8 && Math.abs(totalY) > Math.abs(totalX) * 1.08) {
+            dragRef.current = null;
+            setDragging(false);
+            releasePointerSafely(event.currentTarget, event.pointerId);
+            return;
+          }
           const frameDeltaX = event.clientX - drag.previousX;
           const now = event.timeStamp || performance.now();
           const elapsed = Math.max(8, now - drag.previousTime);
@@ -740,7 +760,10 @@ export function MoodWheel<Value extends string = string>({
         }}
         onWheel={(event) => {
           if (disabled) return;
-          const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+          // Vertical wheel/trackpad travel belongs to the containing question reel.
+          // Horizontal travel keeps controlling the authored wheel itself.
+          if (Math.abs(event.deltaY) >= Math.abs(event.deltaX) && !event.shiftKey) return;
+          const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
           if (Math.abs(delta) < WHEEL_SCROLL_THRESHOLD) return;
           event.preventDefault();
           shift(delta > 0 ? 1 : -1, "wheel");
@@ -768,7 +791,7 @@ export function MoodWheel<Value extends string = string>({
           aria-hidden="true"
           className="muzluk-mood-wheel__fallback-pointer"
           src={assets.pointer}
-          style={{ transform: `translateX(-50%) rotate(${reducedMotion ? 0 : Math.max(-0.13, Math.min(0.13, -ambientVelocityY / 3_600))}rad)` }}
+          style={{ transform: `translateX(calc(-50% + ${reducedMotion ? 0 : Math.sin(Math.max(-0.13, Math.min(0.13, -ambientVelocityY / 3_600))) * 7}px)) rotate(${reducedMotion ? 0 : Math.max(-0.13, Math.min(0.13, -ambientVelocityY / 3_600))}rad)` }}
         />
       </div>
 

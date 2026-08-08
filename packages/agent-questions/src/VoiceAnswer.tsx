@@ -13,6 +13,7 @@ function MicrophoneIcon({ recording }: { recording: boolean }) {
 }
 
 export function VoiceAnswer({
+  compact = false,
   disabled,
   locale,
   messages,
@@ -21,6 +22,7 @@ export function VoiceAnswer({
   onText,
   onError,
 }: {
+  compact?: boolean;
   disabled: boolean;
   locale: string;
   messages: AgentQuestionMessages;
@@ -93,14 +95,14 @@ export function VoiceAnswer({
   return (
     <button
       type="button"
-      className="muzluk-agent-questions__voice"
+      className={compact ? "muzluk-agent-questions__voice muzluk-agent-questions__voice--compact" : "muzluk-agent-questions__voice"}
       disabled={disabled || busy}
       aria-label={busy ? messages.transcribing : recording ? messages.recording : messages.record}
       aria-pressed={recording}
       onClick={() => recording ? stop() : void start()}
     >
       <MicrophoneIcon recording={recording} />
-      <span>{busy ? messages.transcribing : recording ? messages.recording : messages.record}</span>
+      {!compact || busy || recording ? <span>{busy ? messages.transcribing : recording ? messages.recording : messages.record}</span> : null}
     </button>
   );
 }
