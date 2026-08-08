@@ -29,6 +29,9 @@ The source shelf geometry is available with `layoutVariant="ultraWide"`. Use
 `onAttemptInteract` to gate a gesture while a host is saving, and
 `MOOD_WHEEL_ASSETS.tick` when a host mixer needs the exact bundled tick cue.
 
+Use `layoutVariant="responsive"` when one component must preserve the
+ultra-wide mobile shelf while using the compact authored desktop geometry.
+
 Motion stays continuous across every interaction: the Pixi wheel uses an
 interruptible damped spring, release projects a short swipe velocity into the
 nearest authored detent, and the pointer leans and shakes from that velocity

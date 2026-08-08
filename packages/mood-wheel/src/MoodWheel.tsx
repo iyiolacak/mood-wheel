@@ -61,7 +61,7 @@ export type MoodWheelProps<Value extends string = string> = Readonly<{
   showControls?: boolean;
   showHint?: boolean;
   /** Matches the two source layouts used by the web experience. */
-  layoutVariant?: "default" | "ultraWide";
+  layoutVariant?: "default" | "ultraWide" | "responsive";
   /** Vertical host velocity in px/s lets the loose pointer react when its whole surface moves. */
   ambientVelocityY?: number;
   /** Lets a host gate the first interaction while an answer is busy. */
@@ -176,9 +176,9 @@ function shouldPlayIntro(mode: MoodWheelProps["intro"], key: string, limit: numb
 }
 
 /** Keeps the authored wheel rising out of the viewport at every supported width. */
-function layoutPixi(runtime: PixiRuntime, width: number, height: number, layoutVariant: "default" | "ultraWide") {
+function layoutPixi(runtime: PixiRuntime, width: number, height: number, layoutVariant: "default" | "ultraWide" | "responsive") {
   const isWide = width >= WIDE_LAYOUT_MIN_WIDTH;
-  const isUltraWide = layoutVariant === "ultraWide";
+  const isUltraWide = layoutVariant === "ultraWide" || (layoutVariant === "responsive" && !isWide);
   const wheelWidth = isUltraWide
     ? isWide
       ? Math.min(width * 1.06, 660)

@@ -114,11 +114,15 @@
 
 .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8.25rem; }
 .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(146%, 32.5rem); }
+.muzluk-mood-wheel[data-layout="responsive"] .muzluk-mood-wheel__viewport { height: 8.25rem; }
+.muzluk-mood-wheel[data-layout="responsive"] .muzluk-mood-wheel__fallback-wheel { width: min(146%, 32.5rem); }
 .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: max(122%, 18.25rem); }
 .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.25rem, 8vw, 3.25rem); }
 @media (min-width: 640px) {
   .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__viewport { height: 8.25rem; }
   .muzluk-mood-wheel[data-layout="ultraWide"] .muzluk-mood-wheel__fallback-wheel { width: min(106%, 41.25rem); }
+  .muzluk-mood-wheel[data-layout="responsive"] .muzluk-mood-wheel__fallback-wheel { width: min(92%, 32.5rem); }
+  .muzluk-mood-wheel[data-layout="responsive"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.75rem, 7vw, 3.875rem); }
   .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-wheel { width: min(92%, 32.5rem); }
   .muzluk-mood-wheel[data-layout="default"] .muzluk-mood-wheel__fallback-pointer { height: clamp(2.75rem, 7vw, 3.875rem); }
 }
